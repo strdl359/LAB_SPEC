@@ -1,0 +1,587 @@
+#include <iostream>    					//Ввод и вывод
+#include <cstdlib>     					//Библиотека стандартных функций
+#include <vector>      					//Библиотека для работы с векторами
+#include "Windows.h"   					//Библиотека Windows
+#include <algorithm>   					//Библиотека алгоритма
+
+
+using namespace std;  					    //Пространство имен
+
+int vertex;								          //вершины
+int edge; 		 						          //ребра
+bool existInpAdj = false;				    //проверка: вводили ли матрицу смежности
+bool existInpInc = false;				    //проверка: вводили ли матрицу инцидентности
+bool existInpListAdj = false;			  //проверка: вводили ли список смежности
+int** matrixInc; 						        //указатель на указаль матрицы инцидентности
+int** matrixAdj; 						        //указатель на указаль матрицы смежности
+vector<vector <int> > AdjList;			//список смежности
+
+
+
+void inputAdj();						          //ввод матрици смежности
+void inputGraf();						          //ввод графа
+void inputInc();						          //ввод матрици инцидентности
+vector<vector<int> > inputListAdj();	//ввод списка смежности
+void outputGraf();						         //вывод графа
+void outputAdj();						          //вывод матрицы смежности
+void outputInc();						          //вывод матрицы инцидентности
+void outputListAdj();					        //вывод списка смежности
+void deleteAdj();						          //удаление матрицы смежности
+void deleteInc();						          //удаление матрицы инцидентности 
+vector<vector<int> > AdjToAdjList();	//матрица смежности в список смежности
+int** AdjListToInc();					        //список смежности в матрица инцидентности
+int** IncToAdj();						          //матрица инцидентности в матрицу смежности
+
+
+int main() {
+	setlocale(LC_ALL, "Russian");
+
+	short choice;	 //выбор пользователя
+	
+	//от выбора пользователя зависит дальнейший ход
+	//пока он не выберет 3, программа будет работать
+	do 
+	{
+		//меню
+		cout << "\nМеню:\n";
+		cout << "1)Ввод графа;\n";
+		cout << "2)Вывод графа;\n";
+		cout << "3)Завершение программы.\n";
+		
+		//ввод выбора пользователя
+		cout << "\nВыберите номер из меню: ";
+		cin >> choice; 
+		
+		//в зависимости, что выбрал пользователь
+		//выполняется одна из ветвей
+		switch (choice)
+		{
+			case 1: 	//ввод графа
+				inputGraf();
+				break;
+			case 2:		//вывод графа
+				outputGraf();
+				break;
+			case 3:		//выход из программы и очищение памяти
+				deleteAdj();		//очищение матрицы смежности
+				deleteInc();		//очищение матрицы инцидентности
+				AdjList.clear(); 	//очищение списка смежности
+				cout << "\nВыход из программы...\n";
+				break;
+			default:	//не дает пользователю ввести число не из меню
+				cout << "\nНекорректный ввод. Выберите число из меню!\n";
+				break;
+		}         
+	} while (choice != 3);
+	
+	return 0;
+}
+
+
+//ввод графа
+void inputGraf()
+{
+	int inputChoice; //выбор пользователя
+	
+	start:
+	
+	//меню
+	cout << "\nМеню:\n";
+	cout << "1)Матрица смежности;\n";
+	cout << "2)Матрица инцидентности;\n";
+	cout << "3)Список смежности;\n";
+	cout << "4)Выйти в главное меню.\n";
+	
+	//ввод выбора пользователя
+	cout << "\nВыберите номер из меню: ";
+	cin >> inputChoice;
+
+	//в зависимости, что выбрал пользователь
+	//выполняется одна из ветвей
+	switch(inputChoice)
+	{
+		case 1:		//ввод матрицы смежности
+			//если уже была введена хоть одна из матриц или список
+			//то выводится предупредительное сообщение
+			//и показывает заново меню
+			//иначе ввод 
+			if (existInpInc || existInpAdj || existInpListAdj) {
+				cout << "\nОшибка. Матрица уже была введена.\n";
+				goto start;		
+			} else
+				inputAdj();		//функция ввода матрицы смежности
+				
+			break;
+		case 2:		//ввод матрицы инцидентности
+			//если уже была введена хоть одна из матриц или список
+			//то выводится предупредительное сообщение
+			//и показывает заново меню
+			//иначе ввод 
+			if (existInpInc || existInpAdj || existInpListAdj) {
+				cout << "\nОшибка. Матрица уже была введена.\n";
+				goto start;
+			} else
+				inputInc(); 	//функция ввода матрицы инцидентности
+				
+			break;
+		case 3:
+			//если уже была введена хоть одна из матриц или список
+			//то выводится предупредительное сообщение
+			//и показывает заново меню
+			//иначе ввод  
+			if (existInpInc || existInpAdj || existInpListAdj) {
+				cout << "\nОшибка. Матрица уже была введена.\n";
+				goto start;
+			} else
+				AdjList = inputListAdj();	//функция ввода списка смежности
+				
+			break;
+		case 4:	
+			break;
+		default:
+			cout << "\nНекорректный ввод. Выберите число из меню!\n";
+			goto start;
+	}
+}
+
+
+//ввод матрицы смежности
+void inputAdj()
+{	
+	cout << "\nВы выбрали: ввод матрици смежности.\n";
+	
+	start:
+	
+	//ввод выбора пользователя
+	cout << "\nВвод данных:\n";	
+	cout << "\nВершины: "; 
+	cin >> vertex;			
+	
+	//если пользователь ввел верное число
+	//то выводится предупредительное сообщение
+	//и заново происходит ввод
+	//иначе вводится матрица с клавиатуры
+	if (vertex < 0) {
+		cout << "\nОшибка. Некорректный ввод данных.\n";
+		goto start;
+	} else {
+		//массив указателей с размернотью вершин
+		matrixAdj = new int* [vertex];	
+		
+		for (int i = 0; i < vertex; i++)
+			matrixAdj[i] = new int [vertex];
+		
+		//ввод с клавиатуры
+		for (int i = 0; i < vertex; i++)
+		{
+			cout << "Строка(" << i + 1 << ", всего " << vertex;
+			cout << " элемента на каждую строку):\n";
+			for (int j = 0; j < vertex; j++)
+				cin >> matrixAdj[i][j];
+			cout << endl;
+		}
+		
+		//проверка на существование массива
+		existInpAdj = true;
+		cout << "\nВвод матрицы смежности успешно выполнен.\n";
+	}	
+}
+
+
+//ввод матрицы инцидентности
+void inputInc()
+{
+	cout << "\nВы выбрали: ввод матрици инцидентности.\n";
+	
+	start:
+	
+	//тоже самое как и при вводе матрицы смежности
+	cout << "\nВвод данных:\n";	
+	cout << "\nВершины: "; 
+	cin >> vertex;
+	cout << "\nРебра: "; 
+	cin >> edge;				
+	
+	if (vertex < 0 || edge < 0) {
+		cout << "\nОшибка. Некорректный ввод данных.\n";
+		goto start;
+	} else {
+		matrixInc = new int* [edge];
+		
+		for (int i = 0; i < edge; i++)
+			matrixInc[i] = new int [vertex];
+
+		for (int i = 0; i < edge; i++)
+		{
+			cout << "Строка " << i + 1 << " (всего " << vertex;
+			cout << " элемента на каждую строку):\n";
+			for (int j = 0; j < vertex; j++)
+				cin >> matrixInc[i][j];
+			cout << endl;
+		}
+		
+		existInpInc = true;
+		cout << "\nВвод матрицы инцидентности успешно выполнен.\n";
+	}
+}
+
+
+//ввод списка смежности
+vector<vector<int> > inputListAdj()
+{
+	cout << "\nВы выбрали: ввод списка смежности.\n";
+	 
+	cout << "\nВвод данных:\n";	
+	cout << "\nВершины: "; 
+	cin >> vertex;
+	
+	vector<vector<int> > AdjList(vertex);
+	
+	cout << "\nЧтобы перейти к следующей вершине,"; 
+	cout << "необходимо написать 0!\n"; 
+	
+	//ввод строки производится пока
+	//пользователь не введен 0
+	//вводится число и оно добавляется
+	//в конец вектора
+	cout << "\nВвод данных:\n";	
+	for (int i = 0; i < vertex; i++) 
+	{
+		cout << i+1 << ") - ";
+		int number = 1;
+		while (number) {
+			cin >> number;
+			AdjList[i].push_back(number);
+		}
+	}
+	
+	//проверка на существование списка смежности
+	existInpListAdj = true;
+	cout << "\nВвод списка смежности успешно выполнен.\n";	
+	
+	return AdjList;
+}
+
+
+//вывод графа
+void outputGraf()
+{
+	int outputChoice; //выбор пользователя
+	
+	start:
+	
+	//меню	
+	cout << "\nМеню:\n";
+	cout << "1)Матрица смежности;\n";
+	cout << "2)Матрица инцидентности;\n";
+	cout << "3)Список смежности;\n";
+	cout << "4)Выйти в главное меню.\n";
+	
+	//ввод выбора пользователя
+	cout << "\nВыберите номер из меню: ";
+	cin >> outputChoice;
+	
+	switch(outputChoice)
+	{
+		case 1:	//вывод матрицы смежности
+			//если существует матрица смежности,
+			//то ее просто выводим
+			//если существует матрица инцидентности,
+			//то делаем из неё матрицу смежности и выводим
+			//если существует список смежности,
+			//то делаем из матрицы инцидентности матрицу смежности,
+			//потом из матрицы смежности делаем список смежности
+			//и выводим
+			if (existInpAdj) {
+				outputAdj();
+			} else if (existInpInc) {
+				matrixAdj = IncToAdj();
+				outputAdj();
+			} else if (existInpListAdj) {
+				matrixInc = AdjListToInc();
+				matrixAdj = IncToAdj();
+				outputAdj();
+			}		
+			goto start;
+		case 2:	//вывод матрицы инцидентности
+			//если существует матрица смежности,
+			//то неё делаем список смежности,
+			//потом из списка смежности делаем матрицу инцидентности
+			//и выводим её
+			//если существует матрица инцидентности,
+			//то просто выводим её
+			//если существует список смежности,
+			//то делаем из него матрицу инцидентности
+			//и выводим
+			if (existInpAdj) {
+				AdjList = AdjToAdjList();
+				matrixInc = AdjListToInc();
+				outputInc();
+			} else if (existInpInc) {
+				outputInc();
+			} else if (existInpListAdj) {
+				matrixInc = AdjListToInc();
+				outputInc();
+			}			
+			goto start;
+		case 3:	//вывод списка смежности
+			//если существует матрица смежности,
+			//то делаем из него список смежности
+			//и выводим
+			//если существует матрица инцидентности,
+			//то делаем из неё матрицу смежности,
+			//потом из матрицы смежности делаем список смежности
+			//и выводим
+			//если существует список смежности,
+			//то просто выводим его
+			if (existInpAdj) {
+				AdjList = AdjToAdjList();
+				outputListAdj();
+			} else if (existInpInc) {
+				matrixAdj = IncToAdj();
+				AdjList = AdjToAdjList();
+				outputListAdj();
+			} else if (existInpListAdj) {
+				outputListAdj();
+			}	
+			goto start;
+		case 4:
+			break;
+		default:	//проверка на правильность ввода
+			cout << "\nНекорректный ввод. Выберите число из меню!\n";
+			goto start;
+	}	
+}
+
+
+//вывод матрицы смежности
+void outputAdj()
+{
+	cout << "\nВы выбрали: вывод матрицы смежности.\n";
+	
+	if (existInpAdj) {
+		cout << "\nМатрица cмежности:\n";
+		for (int i = 0; i < vertex; i++)
+		{
+			for (int j = 0; j < vertex; j++)
+				cout << matrixAdj[i][j] << "\t";
+			cout << endl;
+		}
+	} else
+		cout << "\nОшибка. Матрица не существует.\n";
+}
+
+
+//вывод матрицы инцидентности
+void outputInc()
+{
+	cout << "\nВы выбрали: вывод матрицы инцидентности.\n";
+	
+	if (existInpInc) {
+		cout << "\nМатрица инцидентности:\n";
+		for (int i = 0; i < edge; i++)
+		{
+			for (int j = 0; j < vertex; j++)
+				cout << matrixInc[i][j] << "\t";
+			cout << endl;
+		}
+	} else
+		cout << "\nОшибка. Матрица не существует.\n";
+}
+
+
+//вывод списка смежности
+void outputListAdj()
+{
+	cout << "\nВы выбрали: вывод списка смежности.\n";
+	
+	if (existInpListAdj) {
+		cout << "\nСписок смежности:\n";
+		for (int i = 0; i < AdjList.size(); i++) 
+		{
+			//сортирует по возрастанию кроме 
+			//последнего элемента ( 0 )
+			sort(AdjList[i].begin(), AdjList[i].end()-1);
+			cout << i+1 << ") - ";
+			for (int j = 0; j < AdjList[i].size(); j++)
+			{
+				cout << AdjList[i][j] << " ";
+			}
+			cout << "\n";
+		}
+	} else
+		cout << "\nОшибка. Список не существует.\n";
+}
+
+
+//делает из матрицы смежности список смежности
+vector<vector<int> > AdjToAdjList()
+{
+	//новый вектор для
+	vector<vector<int> > List(vertex);
+	
+	//если элемент будет равен 1 (true),
+	//то в новый вектор запишится
+	//номер его столбца, т.е.
+	//номер вершины
+	for (int i = 0; i < vertex; i++) 
+	{
+		for (int j = 0; j < vertex; j++) 
+		{
+			if (matrixAdj[i][j]) 
+				List[i].push_back(j+1);
+		}
+		List[i].push_back(0);
+	}
+	
+	existInpListAdj = true;
+	
+	return List;
+}
+
+
+//делает из список смежности матрицу инцидентности
+int** AdjListToInc()
+{
+	int n = 0;	//строки
+	int m = 0;	//столбцы
+	
+	//считает количество строк и столбцов
+	//строки = кол-во нулей в каждой из строк
+	//списка смежности
+	//столбцы = кол-во чисел во всем списке
+	//кроме нуля
+	for (int i = 0; i < AdjList.size(); i++)
+		for (int j = 0; j < AdjList[i].size(); j++) 
+			if (AdjList[i][j] > 0) 
+				n++;
+			else
+				m++;
+	
+	edge = n; 	//рёбра
+	vertex = m;	//вершины
+	
+	//создается новая матрица инцидентности
+	int** Inc = new int *[n];
+	
+	for (int i = 0; i < n; i++)
+	{
+		Inc[i] = new int [m];
+		for (int j = 0; j < m; j++)
+			Inc[i][j] = 0;
+	}
+	
+	int line = 0;   			//ход по строкам 
+	int columnStart = -1; 		//столбец для начала(откуда)
+	int columnEnd = -1;			//столбец для конца(куда)
+	
+	//идём по списку смежности 
+	//если элемент больше 0,
+	//то запоминаем его место нахождение
+	//и для строки в матрице инцидентности
+	//находим столбец начала(откуда) и
+	//столбец конца(куда) и соответственно
+	//записываем -1 и 1
+	//и переходим к следущей строке и 
+	//переходим к следущему элементу в списке
+	for (int i = 0; i < AdjList.size(); i++) 
+	{
+		for (int j = 0; j < AdjList[i].size(); j++) 
+		{
+			if (AdjList[i][j]) 
+			{
+				columnStart = i;
+				columnEnd = AdjList[i][j]-1;
+			}
+			if (columnStart > -1) {
+				Inc[line][columnStart] = -1;
+				Inc[line++][columnEnd] = 1;
+				columnStart = -1;
+				columnEnd = -1;
+			}
+			if (AdjList[i][j] == i+1) 
+			{
+				Inc[line++][columnStart] = 2;
+				columnStart = -1;
+				columnEnd = -1;
+			}
+		}
+	}
+	
+	existInpInc = true;
+	
+	return Inc;
+}
+
+
+//делает из матрицу инцидентности матрицу смежности
+int** IncToAdj()
+{
+	//создается новая матрица смежности
+	int** Adj = new int* [vertex];
+	
+	for (int i = 0; i < vertex; i++)
+	{
+		Adj[i] = new int [vertex];
+		for (int j = 0; j < vertex; j++)
+		 	Adj[i][j] = 0;
+	}
+
+	int line = 0;   	//строка
+	int column = 0;		//столбец
+	
+	//идём по матрицы инцидентности
+	//если элемент -1, то запоминаем строку
+	//если элемент 1, то запоминаем столбец
+	//кол-во элементов равных -1 показывает
+	//кол-во элементов равных 1, которые будут
+	//в матрице смежности под столбцами,
+	//которые соответствуют строкам матрицы инцидентности
+	for (int i = 0; i < edge; i++) 
+	{	
+		bool flag = false;
+		for (int j = 0; j < vertex; j++)
+		{
+			if (matrixInc[i][j] == -1)
+				line = j;
+			if (matrixInc[i][j] == 1)
+				column = j;
+			if (matrixInc[i][j] == 2) 
+			{
+				line = j;
+				column = j;
+				flag = true;
+			}
+		}
+		if (!flag)
+			Adj[line][column] = 1;
+		else
+			Adj[line][column] = 2;
+	}
+	
+	existInpAdj = true;
+	
+	return Adj;
+}
+
+
+//освобождение памяти матрицы смежности
+void deleteAdj() 
+{
+	for (int i = 0; i < vertex; i++)
+		delete[] matrixAdj[i];
+
+	delete[]matrixAdj;
+	existInpAdj = false;
+}
+
+
+//освобождение памяти матрицы инцидентности
+void deleteInc() 
+{
+	for (int i = 0; i < edge; i++) 
+		delete[] matrixInc[i];
+
+	delete[]matrixInc;				
+	existInpInc = false;
+}
