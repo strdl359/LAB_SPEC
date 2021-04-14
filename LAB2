@@ -1,0 +1,581 @@
+#include <iostream>    		
+#include <cstdlib>     				
+#include <vector>      			
+#include "Windows.h"   				
+#include <algorithm>   		
+#include <queue>
+#include <stack>
+
+
+
+using namespace std;
+
+	
+int vertex;										//вершины			 							
+vector<vector <int> > AdjList;					//список смежности
+int** matrixAdj;								//матрица смежности
+int** weightVertex;								//веса вершин
+bool existListAdj = false;						//существование списка смежности
+
+
+vector<vector<int> > inputListAdj();			//ввод списка смежности
+void outputListAdj();							//вывод списка смежности
+void bypassWidth();								//поиск в ширину
+void AdjListToAdj();							//список смежности->матрица смежности
+void inputWeightVertex();						//ввод весов вершин
+void bypassDedth();								//поиск в глубину
+void minFord();									//нахождение минимального пути с помощью Форда
+void minBellmanKallab();						//нахождение минимального пути с помощью Беллмана-Калаба
+void deleteAdj();								//освобождение памяти матрицы смежности
+void deleteWeight();							////освобождение памяти матрицы весов
+
+
+int main() 
+{
+	SetConsoleCP(1251); SetConsoleOutputCP(1251);
+
+	short choice;	
+
+	do 
+	{
+	
+		cout << "\nМеню:\n";
+		cout << "1)Ввод графа в виде списка смежности и вес вершин;\n";
+		cout << "2)Вывод графа на экран;\n";
+		cout << "3)Обход графа в глубину;\n";
+		cout << "4)Обход графа в ширину;\n";
+		cout << "5)Нахождение минимального пути с помощью Форда.\n";
+		cout << "6)Нахождение минимального пути с помощью Беллмана-Калаба.\n";
+		cout << "7)Завершить программу.\n";
+	
+		cout << "\nВыберите номер из меню: ";
+		cin >> choice; 
+		
+		
+		switch (choice)
+		{
+			case 1: 
+				AdjList = inputListAdj();
+				AdjListToAdj();
+				inputWeightVertex();
+				break;
+			case 2:
+				if (existListAdj) 
+					outputListAdj();
+				else
+					cout << "\nОшибка. Введите список смежности с клавиатуры\n";
+				break;
+			case 3:
+				if (existListAdj) 
+					bypassDedth();
+				else
+					cout << "\nОшибка. Введите список смежности с клавиатуры\n";
+				break;
+			case 4:
+				if (existListAdj) 
+					bypassWidth();
+				else
+					cout << "\nОшибка. Введите список смежности с клавиатуры\n";
+				break;
+			case 5:
+				minFord();
+				break;
+			case 6:
+				minBellmanKallab();
+				break;
+			case 7:
+				if (existListAdj) {
+					AdjList.clear();
+					deleteAdj();
+					deleteWeight();
+					cout << "\nПамять очишена.";
+				}
+				
+				cout << "\nВыход из программы...\n";
+				break;
+			default:
+				cout << "\nНекорректный ввод. Выберите число из меню!\n";
+				break;
+		}         
+	} while (choice != 7);
+	
+	return 0;
+}
+
+
+//ввод списка смежности
+vector<vector<int> > inputListAdj()
+{
+	cout << "\nВы выбрали: ввод списка смежности.\n";
+	 
+	cout << "\nВвод данных:\n";	
+	cout << "\nВершины: "; 
+	cin >> vertex;
+	
+	vector<vector<int> > AdjList(vertex);
+	
+	cout << "\nЧтобы перейти к следующей вершине,"; 
+	cout << "необходимо написать 0!\n"; 
+	
+
+	cout << "\nВвод данных:\n";	
+	for (int i = 0; i < vertex; i++) 
+	{
+		cout << i+1 << ") - ";
+		int number = 1;
+		while (number) {
+			cin >> number;
+			AdjList[i].push_back(number);
+		}
+	}
+
+	existListAdj = true;
+	cout << "\nВвод списка смежности и вес вершин успешно выполнен.\n";	
+	
+	return AdjList;
+}
+
+
+//список смежности->матрица смежности
+void AdjListToAdj()
+{
+	int current;
+	
+	//выделяем память для матрицы
+	matrixAdj = new int* [vertex];	
+	
+	for (int i = 0; i < vertex; i++)
+		matrixAdj[i] = new int [vertex];
+	
+	//заполняем матрицу нулями
+	for (int i = 0; i < vertex; i++) 
+		for (int j = 0; j < vertex; j++) 
+			matrixAdj[i][j] = 0;
+	
+	//заполняем матрицу единицами
+	for (int i = 0; i < vertex; i++)
+		for (int j = 0; j < AdjList[i].size() - 1; j++)
+			matrixAdj[i][AdjList[i][j] - 1] = 1;
+}
+
+
+void inputWeightVertex()
+{
+	int weight;
+	
+	//выделяем память для матрицы
+	weightVertex = new int* [vertex];	
+	
+	for (int i = 0; i < vertex; i++)
+		weightVertex[i] = new int [vertex];
+	
+	//заполняем матрицу нулями
+	for (int i = 0; i < vertex; i++) 
+		for (int j = 0; j < vertex; j++) 
+			weightVertex[i][j] = 0;
+	
+	for (int i = 0; i < vertex; i++) 
+	{
+		for (int j = 0; j < vertex; j++) 
+		{
+			if (matrixAdj[i][j] > 0) {
+				cout << "\nРасстояние от " << i+1 << " вершины до " << j+1 << " вершины: ";	
+				cin >> weight;
+				weightVertex[i][j] = weight;
+			}	
+		}
+	}
+}
+
+
+//вывод списка смежности
+void outputListAdj()
+{	
+	if (existListAdj) {
+		cout << "\nСписок смежности:\n";
+		for (int i = 0; i < AdjList.size(); i++) 
+		{
+			sort(AdjList[i].begin(), AdjList[i].end()-1);
+			cout << i+1 << ") - ";
+			for (int j = 0; j < AdjList[i].size(); j++)
+				cout << AdjList[i][j] << " ";
+	
+			cout << "\n";
+		}
+	} else 
+		cout << "\nОшибка. Для начала введите матрицу смежности.\n";
+}
+
+
+//поиск в глубину
+void bypassDedth()
+{
+	if (existListAdj) {
+		stack<int> stackDedth;	
+		int vertArray[vertex]; 	//массив: вершины графа
+		
+		//сначала все вершины равны 0 
+		for (int i = 0; i < vertex; i++)
+			 vertArray[i] = 0;
+			 
+		//добавляем первую вершину
+		stackDedth.push(0);
+		
+		cout << "\nНомера вершин поиска в глубину: ";
+		
+		//пока стек не пуст
+		while(!stackDedth.empty())
+		{
+			int current = stackDedth.top();		//извлекаем вершину
+			stackDedth.pop();					//удаляем вершину
+			
+			//если наткнулись на посещенную
+			//то переходим к след.элементу
+			if (vertArray[current] == 2)
+				continue;
+						
+			//отмечаем ее как посещенную
+			vertArray[current] = 2;
+			
+			//проверяем для вершины все ее смежные вершины,
+			//если вершина смежная и не обнаружена,
+			//то добавляем ее в стек и отмечаем вершину как обнаруженную
+			for (int i = vertex - 1; i > -1; i--)
+			{
+			 	if (matrixAdj[current][i] == 1 && vertArray[i] != 2) {
+			 		stackDedth.push(i);	
+				 	vertArray[i] = 1;
+				}
+			}
+			
+			// выводим номер вершины 
+			cout << current + 1 << " ";
+		}
+		
+		cout << "\n";
+	} else
+		cout << "\nОшибка. Для начала введите матрицу смежности.\n";	
+}
+
+
+//поиск в ширину
+void bypassWidth()
+{
+	if (existListAdj) {
+		queue<int> queaeWidth;  	//очередь
+		
+		int vertArray[vertex]; 	//массив: вершины графа
+		
+		//сначала все вершины равны 0 
+		for (int i = 0; i < vertex; i++)
+			 vertArray[i] = 0;
+		
+		//добавляем первую вершину
+		queaeWidth.push(0);
+		
+		cout << "\nНомера вершин поиска в ширину: ";
+		
+		//пока очередь не пуста
+		while(!queaeWidth.empty())
+		{
+			int current = queaeWidth.front();	//извлекаем вершину
+			queaeWidth.pop();					//удаляем вершину
+			
+			vertArray[current] = 2;				//отмечаем ее как посещенную
+			
+			// проверяем для нее все смежные вершины
+			//если вершина смежная и не обнаружена
+		    //добавляем ее в очередь
+		    //отмечаем вершину как обнаруженную
+			for (int i = 0; i < vertex; i++)
+		    { 
+			    if (matrixAdj[current][i] == 1 && vertArray[i] == 0) {
+			        queaeWidth.push(i); 
+			        vertArray[i] = 1; 
+			    }
+		    } 
+		    
+		    // выводим номер вершины 
+			cout << current + 1 << " ";
+		}
+		
+		cout << "\n";
+	} else
+		cout << "\nОшибка. Для начала введите матрицу смежности.\n";	
+}
+
+
+void minFord()
+{
+	if (existListAdj) {
+		
+	    int start, end; 
+	    
+	    cout << "\nВведите начальную вершину: ";
+	    cin >> start;
+	        
+	    cout << "\nВведите конечную вершину: ";
+	    cin >> end;
+		
+	    int interval[vertex + 1];
+	    
+	    for (int i = 1; i < vertex + 1; i++) // Расстояние до вершин - условная бесконечность
+	        interval[i] = 999;
+	    
+	    //инициализация вершины
+	    //расстояние до самой себя = 0
+	    interval[start] = 0;
+	
+	    bool flag = false;
+		
+	    for (int i = 0; i < vertex; i++) 							// Перебор всех вершин
+	    {													
+	        for (int j = 0; j < vertex; j++)						// Перебор всех вершин
+	        {
+	            for (int k = 0; k < AdjList[j].size() - 1; k++) 	// Перебор всех вершин
+	            {
+					// Если текущее расстояние до вершины 
+					// больше чем вес ребра плюс расстояние самой вершины (т. е. есть более кратчайший путь)
+					// тогда обновляем кратчайший путь до этой вершины
+					// и он равен текущему расстоянию + вес ребра
+	                if (interval[AdjList[j][k]] > interval[j + 1] + weightVertex[j][AdjList[j][k] - 1]) {
+	                   	interval[AdjList[j][k]] = interval[j + 1] + weightVertex[j][AdjList[j][k] - 1];
+	                   	
+	                    if (i == vertex - 1) 
+	                        flag = true;
+	                }
+	            }
+	        }
+	    }
+	    
+	    if (flag) {
+	        cout << "\nОшибка. Граф содержит отрицательный цикл. Найти путь невозможно.\n";
+	        return;
+	    } 
+		
+		// Если минимальное расстояние до конечной вершины осталось условной бесконечностью
+		// это значит, что минимального пути не существует к данной вершине
+	    if (interval[end] == 999)
+	    {
+	        cout << "\nНевозможно попасть из вершины " << start << " в вершину " << end;
+	        cout << "!\n\n";
+	        return;
+	    }
+
+		//Идём от обратного. Текущая вершина - та вершина, куда нужно дойти
+	    int currentVertex = end;
+	    
+		// Расстояние до этой вершины
+		int currentWeight = interval[end];
+	    
+		//Стек для запоминания пути, по которому будем идти
+	    stack<int> trajectory;
+		//Т.к. мы уже знаем, конечную вершину - запушим её
+	    trajectory.push(end);
+	    
+		// Алгоритм закончится тогда, когда текущая вершина станет вершиной начала
+		// т.е. мы получим полноценный путь
+	    while (currentVertex != start)
+	    {
+			//Перебор всех вершин
+	        for (int i = 0; i < vertex; i++)
+	        {
+				// Если есть ребро от перебираемой вершины к текущей 
+				// И если минимальное расстояние до текущий вершины минус вес ребра
+				// равен минимальному расстоянию до перебираемой вершины
+				// тогда от текущего расстояние отнимаем вес дуги
+				// и текущей вершиной становится найденная вершина
+				// добавляем эту вершину в путь
+	            if ((weightVertex[i][currentVertex - 1] != 0) && (currentWeight - weightVertex[i][currentVertex - 1] == interval[i + 1])) {
+				    currentWeight -= weightVertex[i][currentVertex - 1];
+	                currentVertex = i + 1;
+	                trajectory.push(currentVertex);
+					// т.к. мы уже нашли одну подходящую вершину - остальные смотреть не будем
+	                break;
+	            }
+	        }
+	    }
+	    
+		// Выводим информацию о минимальном пути
+	    cout << "\nМинимальный путь = " << interval[end];
+	    cout << "\nПуть: ";
+	    
+		// Начинаем раскручивать стек в обратную сторону
+		// Пока стек не пуст, получаем с него вершины (в обратном порядке их добавления)
+	    while (!trajectory.empty())
+	    {
+	        cout << trajectory.top();
+	        
+	        if (trajectory.size() != 1) 
+	            cout << " -> ";
+	            
+	        trajectory.pop();
+	    }
+	    cout << "\n";
+	} 
+	else 
+		cout << "\nОшибка. Для начала введите матрицу смежности.\n";	
+}
+
+
+void minBellmanKallab()
+{
+	if (existListAdj) {
+		
+		// Подготавливаем весовую матрицы к работе алгоритма
+		for (int i = 0; i < vertex; i++)
+		{
+			for (int j = 0; j < vertex; j++)
+			{
+				if (i == j) // Если i == j, то пропускаем
+					continue;
+				
+				// Иначе если нет ребра (вес равен 0)
+				// Тогда вес равен условной бесконечности 
+				if (weightVertex[i][j] == 0) 	
+					weightVertex[i][j] = 999;
+					
+			}
+		}
+
+		int start, end; 
+	    
+	    cout << "\nВведите начальную вершину: ";
+	    cin >> start;
+	        
+	    cout << "\nВведите конечную вершину: ";
+	    cin >> end;
+
+		int **vectors;	// Динамическая матрица векторов
+		vectors = new int *[vertex];
+		vectors[0] = new int [vertex];
+		
+		// Первый вектор совпадает с столбцом вершины из весовой матрицы, до которой нужно найти путь
+		for (int i = 0; i < vertex; i++)
+			vectors[0][i] = weightVertex[i][end - 1];
+			
+		// Булевая переменная для определения идентичности n и n-1 векторов
+		bool vectorsIdent = false;
+		int j = 1, min, curr;
+		
+		// Пока предпоследний вектор не совпадёт с последним - выполняем алгоритм
+		while (!vectorsIdent)
+		{
+			// Выделяем память под новый вектор
+			vectors[j] = new int [vertex];
+			
+			// Допустим, что векторы совпадут
+			vectorsIdent = true;
+			
+			// Вычисляем элемент vectors[j][k]
+			for (int k = 0; k < vertex; k++)
+			{
+				min = 999; // Пусть минимальным значением будет условная бесконечность
+				
+				// Перебор всех вершин
+				for (int i = 0; i < vertex; i++)
+				{
+					// Вычисляем значения для каждой вершины
+					curr = vectors[j-1][i] + weightVertex[k][i];
+					
+					// Если текущое значение меньше минимального - запоминаем его
+					if (curr < min)
+						min = curr;
+				}
+				
+				// Записываем в vectors[j][k] полученное минимальное значение из всех вершин
+				vectors[j][k] = min;
+				
+				// Если значение для вершины из текущего вектора не совпало с значением из
+				// предыдущего вектора, значит векторы не идентичны
+				if (vectors[j][k] != vectors[j-1][k])
+					vectorsIdent = false;
+
+			}
+			j++;	// Следующий вектор
+		}
+		
+		j--;  // Делаем для того, чтобы в j лежало настоящее количество векторов
+
+		// Если расстояние из конечной вершины до начальной осталось условной бесконечностью
+		// Значит туда не возможно попасть - сообщаем об этом
+		if (vectors[j-1][start-1] == 999)
+		{
+			cout << "\nНевозможно попасть из вершины " << start << " в вершину " << end;
+			cout << "!\n\n";
+			return;
+		}
+
+		cout << "\nМинимальный путь = " << vectors[j-1][start-1];
+		cout << "\nПуть: ";
+		
+		// Пока стартовая вершина не достигнет конечной
+		while (start != end)
+		{
+			// Перебор всех вершин
+			for (int i = 1; i < vertex + 1; i++)
+			{
+				// Если перебираемая вершина == текущей - пропускаем
+				if (i == start)
+					continue;
+					
+				// Если расстояние текущей (стартовой) вершины минус расстояние до перебираемой вершины
+				// равно весу ребра между ними, значит это искомый путь
+				if (vectors[j-1][start-1] - vectors[j-1][i-1] == weightVertex[start-1][i-1])
+				{
+					// Выводим текущую (стартовую вершину)
+					cout << start << " -> ";
+					
+					// Найденная вершина становится стартовой
+					start = i;
+					
+					// Мы уже нашли одну подходящую, остальные смотреть не обязательно
+					break;
+				}
+			}
+		}
+		
+		// Дописываем вершину, в которую мы пришли
+		cout << end << "\n\n";
+
+		// Приводим весовую матрицу в исходный вид
+		for (int i = 0; i < vertex; i++)
+		{
+			for (int j = 0; j < vertex; j++)
+			{
+				if (i == j)
+					continue;
+
+				if (weightVertex[i][j] == 999)
+					weightVertex[i][j] = 0;
+			}
+		}
+
+		// Освобождаем память, выделенную под матрицу векторов
+		for (int i = 0; i < j; i++)
+			delete vectors[i];
+
+		delete []vectors;
+	} else
+		cout << "\nОшибка. Для начала введите матрицу смежности.\n";
+}
+
+
+//освобождение памяти матрицы смежности
+void deleteAdj() 
+{
+	for (int i = 0; i < vertex; i++)
+		delete[] matrixAdj[i];
+
+	delete[]matrixAdj;
+}
+
+
+//освобождение памяти матрицы весов
+void deleteWeight() 
+{
+	for (int i = 0; i < vertex; i++)
+		delete[] weightVertex[i];
+
+	delete[]weightVertex;
+}
